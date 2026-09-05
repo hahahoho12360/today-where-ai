@@ -6,6 +6,8 @@
 ## 통과한 검사
 
 - Python `unittest` 16개 통과
+- 실제 `requirements.txt` 의존성 설치 및 import 통과
+- 설치된 OpenAI SDK의 `responses.parse` 필수 인자 호환성 확인
 - Python 전체 파일 바이트코드 컴파일 통과
 - JavaScript `node --check` 문법 검사 통과
 - HTML ID 중복 없음

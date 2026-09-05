@@ -1,7 +1,7 @@
 import sys
 import types
 import unittest
-from datetime import date, timedelta
+from datetime import timedelta
 from unittest.mock import patch
 
 from pydantic import ValidationError
