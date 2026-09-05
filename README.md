@@ -2,9 +2,9 @@
 
 현재 위치 또는 법정동·행정동을 확인하고, 날짜·동행·이동수단·관심사를 입력하면 **실제로 검색된 장소만 사용해** 당일 여행을 만드는 반응형 웹서비스입니다.
 
-> 배포 URL: `https://YOUR-PROJECT-NAME.vercel.app`  
-> GitHub URL: `https://github.com/YOUR-ID/today-where-ai`  
-> 배포 후 위 두 주소의 `YOUR-...` 부분을 실제 주소로 반드시 바꾸세요.
+> 배포 URL: `https://today-where-ai.vercel.app`  
+> GitHub URL: `https://github.com/hahahoho12360/today-where-ai`  
+
 
 ## 핵심 기능
 
@@ -81,7 +81,7 @@ today-where-ai/
 
 ## 로컬 실행
 
-Python 3.12와 Node.js가 설치된 터미널에서 실행합니다.
+Python 3.13와 Node.js가 설치된 터미널에서 실행합니다.
 
 ```bash
 python -m venv .venv

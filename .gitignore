@@ -1,5 +1,6 @@
 .env
-.vercel
+.env.local
+.vercel/
 .venv/
 __pycache__/
 *.py[cod]
@@ -7,3 +8,5 @@ __pycache__/
 .DS_Store
 evidence/*.png
 !evidence/README.md
+.vercel
+.env*
