@@ -8,12 +8,7 @@
 
 ## 증빙 파일
 
-- 데스크톱: `evidence/01-desktop-home.png`
-- 모바일: `evidence/02-mobile-responsive.png`
-- AI 입력·결과: `evidence/03-ai-input-result.png`
-- 실패 처리: `evidence/04-error-message.png`
-- 보너스 기능: `evidence/05-bonus-dark-history.png`
-- AI 코딩 도구 과정: `evidence/06-ai-coding-process.png`
+- evidence 폴더 README.md 및 사진 10장 확인
 
 ## 한 문장 설명
 
