@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import secrets
 from datetime import date, datetime, timedelta
 from http.server import BaseHTTPRequestHandler
 from typing import Any, Callable, Literal
@@ -28,7 +29,25 @@ KAKAO_BASE_URL = "https://dapi.kakao.com/v2/local"
 OPEN_METEO_URL = "https://api.open-meteo.com/v1/forecast"
 TOUR_API_URL = "https://apis.data.go.kr/B551011/KorService2/searchFestival2"
 HTTP_TIMEOUT = (3.05, 9)
-
+PROVINCES = (
+    "서울특별시",
+    "부산광역시",
+    "대구광역시",
+    "인천광역시",
+    "광주광역시",
+    "대전광역시",
+    "울산광역시",
+    "세종특별자치시",
+    "경기도",
+    "강원특별자치도",
+    "충청북도",
+    "충청남도",
+    "전북특별자치도",
+    "전라남도",
+    "경상북도",
+    "경상남도",
+    "제주특별자치도",
+)
 
 def today_in_korea() -> date:
     return datetime.now(ZoneInfo("Asia/Seoul")).date()
@@ -443,46 +462,130 @@ def parse_with_ai(model_class: type[BaseModel], system: str, user: str) -> BaseM
 
 def recommend_regions(payload: dict[str, Any]) -> list[dict[str, Any]]:
     trip_date = validate_trip_date(payload.get("date"))
+
     preferences = {
         "date": trip_date,
-        "departure": str(payload.get("departure") or "미입력")[:80],
-        "companion": str(payload.get("companion") or "혼자")[:30],
-        "transport": str(payload.get("transport") or "대중교통")[:30],
-        "interests": validate_interests(payload.get("interests")),
-        "budget": str(payload.get("budget") or "보통")[:30],
+        "departure": str(
+            payload.get("departure") or "미입력"
+        )[:80],
+        "companion": str(
+            payload.get("companion") or "혼자"
+        )[:30],
+        "transport": str(
+            payload.get("transport") or "대중교통"
+        )[:30],
+        "interests": validate_interests(
+            payload.get("interests")
+        ),
+        "budget": str(
+            payload.get("budget") or "보통"
+        )[:30],
     }
+
+    excluded_codes = {
+        str(code).strip()
+        for code in payload.get(
+            "excluded_region_codes",
+            []
+        )[:20]
+        if str(code).strip()
+    }
+
+    excluded_provinces = {
+        str(province).strip()
+        for province in payload.get(
+            "excluded_provinces",
+            []
+        )[:10]
+        if str(province).strip() in PROVINCES
+    }
+
+    # 최근 추천된 시·도를 우선 제외합니다.
+    province_pool = [
+        province
+        for province in PROVINCES
+        if province not in excluded_provinces
+    ]
+
+    # 제외하고 남은 시·도가 너무 적으면 전국 목록을 다시 사용합니다.
+    if len(province_pool) < 5:
+        province_pool = list(PROVINCES)
+
+    # 남은 시·도 중 5개를 무작위로 선택합니다.
+    target_provinces = secrets.SystemRandom().sample(
+        province_pool,
+        5,
+    )
+
+    preferences["이번 추천 대상 시도"] = target_provinces
+    preferences["최근 추천되어 제외할 지역"] = sorted(
+        excluded_codes
+    )
+
     result = parse_with_ai(
         RegionIdeas,
         (
-            "당신은 대한민국 국내 여행 지역 추천가입니다. 사용자의 조건에 맞는 서로 다른 후보 5곳을 제안하세요. "
-            "각 full_address는 반드시 실제 대한민국의 ‘시도 + 시군구 + 법정동 또는 행정동’ 전체 이름이어야 합니다. "
-            "확실하지 않은 지명은 쓰지 말고, 같은 이름의 동을 구분할 수 있게 전체 주소를 적으세요."
+            "당신은 대한민국 국내 여행 지역 추천가입니다. "
+            "입력된 ‘이번 추천 대상 시도’ 5곳에서 "
+            "각각 정확히 한 곳씩, 서로 다른 후보 5곳을 제안하세요. "
+            "최근 추천되어 제외할 지역은 다시 제안하지 마세요. "
+            "각 full_address는 반드시 실제 대한민국의 "
+            "‘시도 + 시군구 + 법정동 또는 행정동’ 전체 이름이어야 합니다. "
+            "확실하지 않은 지명은 쓰지 말고, "
+            "같은 이름의 동을 구분할 수 있게 전체 주소를 적으세요."
         ),
         json.dumps(preferences, ensure_ascii=False),
     )
 
     verified: list[dict[str, Any]] = []
     seen_codes: set[str] = set()
+    seen_provinces: set[str] = set()
+
     for idea in result.candidates:
         try:
-            region = verify_region_query(idea.full_address)
+            region = verify_region_query(
+                idea.full_address
+            )
         except ServiceError:
             continue
-        unique_code = region.get("administrative_code") or region.get("legal_code")
-        if unique_code in seen_codes:
+
+        unique_code = (
+            region.get("administrative_code")
+            or region.get("legal_code")
+        )
+        province = str(
+            region.get("province") or ""
+        )
+
+        if (
+            not unique_code
+            or unique_code in excluded_codes
+            or unique_code in seen_codes
+            or province not in target_provinces
+            or province in seen_provinces
+        ):
             continue
+
         seen_codes.add(unique_code)
+        seen_provinces.add(province)
+
         region["reason"] = idea.reason
         region["suggested_type"] = idea.dong_type
         verified.append(region)
+
         if len(verified) == 3:
             break
+
     if len(verified) < 2:
         raise ServiceError(
             422,
             "TOO_FEW_VERIFIED_REGIONS",
-            "AI 후보 중 실제 주소로 확인된 지역이 부족합니다. 조건을 조금 바꾸거나 지역을 직접 입력해 주세요.",
+            (
+                "AI 후보 중 실제 주소로 확인된 지역이 부족합니다. "
+                "다시 추천받거나 지역을 직접 입력해 주세요."
+            ),
         )
+
     return verified
 
 

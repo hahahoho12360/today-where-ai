@@ -48,7 +48,7 @@ function readJsonStorage(key, fallback) {
     return fallback;
   }
 }
-/* 여기부터 추가 */
+
 function regionKey(region) {
   return String(
     region.administrative_code ||
@@ -75,6 +75,7 @@ function saveRecentRegions(regions) {
     unique.push({
       code: key,
       display_name: region.display_name,
+      province: region.province || "",
     });
   }
 
@@ -83,7 +84,7 @@ function saveRecentRegions(regions) {
     JSON.stringify(unique.slice(0, 12))
   );
 }
-/* 여기까지 추가 */
+
 function setLoading(isLoading, text = "정보를 확인하고 있어요…") {
   $("#loadingText").textContent = text;
   $("#loadingOverlay").hidden = !isLoading;
@@ -254,8 +255,21 @@ async function requestRegionSuggestions() {
 
   setLoading(true, "AI가 실제로 확인 가능한 동네를 찾고 있어요…");
 
-  try {
-    const data = await apiFetch("/api/recommend_regions", conditions);
+try {
+  const recentRegions = readJsonStorage(
+    STORAGE_KEYS.recentRegions,
+    []
+  );
+
+  const data = await apiFetch("/api/recommend_regions", {
+    ...conditions,
+    excluded_region_codes: recentRegions.map(
+      (region) => region.code
+    ),
+    excluded_provinces: recentRegions
+      .slice(0, 6)
+      .map((region) => region.province),
+  });
 
     saveRecentRegions(data.regions);
 
