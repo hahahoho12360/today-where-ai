@@ -4,6 +4,7 @@ const STORAGE_KEYS = {
   theme: "todayWhere.theme",
   history: "todayWhere.history.v1",
   metrics: "todayWhere.metrics.v1",
+  recentRegions: "todayWhere.recentRegions.v1",
 };
 
 const CATEGORY_META = {
@@ -47,7 +48,42 @@ function readJsonStorage(key, fallback) {
     return fallback;
   }
 }
+/* 여기부터 추가 */
+function regionKey(region) {
+  return String(
+    region.administrative_code ||
+    region.legal_code ||
+    region.display_name ||
+    ""
+  );
+}
 
+function saveRecentRegions(regions) {
+  const previous = readJsonStorage(STORAGE_KEYS.recentRegions, []);
+  const combined = [...regions, ...previous];
+  const unique = [];
+  const seen = new Set();
+
+  for (const region of combined) {
+    const key = regionKey(region);
+
+    if (!key || seen.has(key)) {
+      continue;
+    }
+
+    seen.add(key);
+    unique.push({
+      code: key,
+      display_name: region.display_name,
+    });
+  }
+
+  localStorage.setItem(
+    STORAGE_KEYS.recentRegions,
+    JSON.stringify(unique.slice(0, 12))
+  );
+}
+/* 여기까지 추가 */
 function setLoading(isLoading, text = "정보를 확인하고 있어요…") {
   $("#loadingText").textContent = text;
   $("#loadingOverlay").hidden = !isLoading;
@@ -203,25 +239,42 @@ async function useCurrentLocation() {
 
 async function requestRegionSuggestions() {
   let conditions;
+
   try {
     conditions = validateBasicConditions();
+
+    conditions.excluded_regions = readJsonStorage(
+      STORAGE_KEYS.recentRegions,
+      []
+    ).slice(0, 12);
   } catch (error) {
     showStatus(error.message, "error");
     return;
   }
+
   setLoading(true, "AI가 실제로 확인 가능한 동네를 찾고 있어요…");
+
   try {
     const data = await apiFetch("/api/recommend_regions", conditions);
+
+    saveRecentRegions(data.regions);
+
     $("#suggestionGrid").innerHTML = data.regions.map((region, index) => `
       <button class="suggestion-button" type="button" data-region-index="${index}">
         <strong>${escapeHtml(region.display_name)}</strong>
         <small>법정동 ${escapeHtml(region.legal_dong || "-")} · 행정동 ${escapeHtml(region.administrative_dong || "-")}</small>
         <small>${escapeHtml(region.reason)}</small>
       </button>`).join("");
-    $$("[data-region-index]").forEach((button) => button.addEventListener("click", () => {
-      setSelectedRegion(data.regions[Number(button.dataset.regionIndex)]);
-    }));
-    showStatus("AI 후보를 주소 데이터로 검증했습니다. 마음에 드는 지역을 하나 선택해 주세요.");
+
+    $$("[data-region-index]").forEach((button) =>
+      button.addEventListener("click", () => {
+        setSelectedRegion(data.regions[Number(button.dataset.regionIndex)]);
+      })
+    );
+
+    showStatus(
+      "AI 후보를 주소 데이터로 검증했습니다. 마음에 드는 지역을 하나 선택해 주세요."
+    );
   } catch (error) {
     showStatus(error.message, "error");
   } finally {

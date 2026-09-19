@@ -177,6 +177,36 @@ footer p { flex: 1; margin: 0; opacity: .75; font-size: .85rem; }
 footer a { font-size: .82rem; font-weight: 800; }
 .loading-overlay { position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; align-content: center; padding: 20px; background: color-mix(in srgb, var(--paper), transparent 8%); text-align: center; backdrop-filter: blur(8px); }
 .loading-overlay p { color: var(--muted); }
+.loading-overlay > strong,
+.loading-overlay > p {
+  width: min(100%, 320px);
+  max-width: 100%;
+  margin-inline: auto;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: keep-all;
+}
+
+.loading-overlay > strong {
+  display: block;
+  line-height: 1.5;
+}
+
+.loading-overlay > p {
+  margin-top: 10px;
+  margin-bottom: 0;
+}
+@media (max-width: 460px) {
+  .loading-overlay {
+    padding-inline: 24px;
+  }
+
+  .loading-overlay > strong,
+  .loading-overlay > p {
+    width: 100%;
+    max-width: 290px;
+  }
+}
 .loader { width: 54px; height: 54px; margin-bottom: 20px; border: 5px solid var(--line); border-top-color: var(--coral); border-radius: 50%; animation: spin .8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
@@ -207,18 +237,69 @@ footer a { font-size: .82rem; font-weight: 800; }
   .form-grid { grid-template-columns: 1fr; }
   .place-grid { grid-template-columns: 1fr; }
   .place-card:last-child { grid-column: auto; }
-  .timeline li { grid-template-columns: 68px 1fr; gap: 14px; }
-  .timeline li > a { grid-column: 2; }
+.timeline li {
+  grid-template-columns: 96px minmax(0, 1fr);
+  gap: 12px;
+}
+
+.timeline li > div {
+  min-width: 0;
+}
+
+.timeline time {
+  white-space: nowrap;
+  font-size: 1rem;
+}
+
+.timeline h4,
+.timeline p {
+  overflow-wrap: anywhere;
+  word-break: keep-all;
+}
+
+.timeline li > a {
+  grid-column: 2;
+}
   .result-title { flex-direction: column; }
   footer .section-shell { align-items: flex-start; flex-direction: column; }
 }
 
 @media (max-width: 460px) {
-  .hero-visual { min-height: 285px; }
-  .route-card { width: 150px; padding: 13px; }
-  .mode-tabs { grid-template-columns: 1fr; }
-  .input-action { flex-direction: column; }
-  .summary-actions .button { width: 100%; }
+  .hero-visual {
+    min-height: 285px;
+  }
+
+  .route-card {
+    width: 150px;
+    padding: 13px;
+  }
+
+  .mode-tabs {
+    grid-template-columns: 1fr;
+  }
+
+  .input-action {
+    flex-direction: column;
+  }
+
+  .summary-actions .button {
+    width: 100%;
+  }
+
+  /* 작은 모바일에서 시간과 장소를 위아래로 배치 */
+  .timeline li {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .timeline li > a {
+    grid-column: 1;
+  }
+
+  .timeline time {
+    display: block;
+    white-space: nowrap;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
